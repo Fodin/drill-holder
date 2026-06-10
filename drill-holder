@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Запуск генератора подставки для свёрел через freecadcmd.
+#
+#   ./drill-holder [config.py] [--no-gui]
+#
+# По умолчанию открывается Qt-диалог разовой правки (freecadcmd поднимает собственное окно).
+# --no-gui — собрать сразу по конфигу, без диалога (для скриптов/headless).
+# Без аргументов берётся holder_config.py рядом со скриптом.
+# Путь к freecadcmd можно задать переменной окружения FREECADCMD.
+set -euo pipefail
+
+# Каталог скрипта — чтобы запускать из любого места.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+find_freecadcmd() {
+  # 1) Явно заданный путь (должен существовать и быть исполняемым).
+  if [[ -n "${FREECADCMD:-}" ]]; then
+    if [[ -x "$FREECADCMD" ]] || command -v "$FREECADCMD" >/dev/null 2>&1; then
+      echo "$FREECADCMD"; return 0
+    fi
+    echo "Ошибка: FREECADCMD='$FREECADCMD' не найден или не исполняем." >&2
+    return 1
+  fi
+  # 2) В PATH (Linux, Windows/MSYS, Homebrew).
+  for name in freecadcmd FreeCADCmd freecadcmd.exe; do
+    if command -v "$name" >/dev/null 2>&1; then
+      command -v "$name"; return 0
+    fi
+  done
+  # 3) Типовые места установки.
+  local candidates=(
+    "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd"   # macOS 1.x
+    "/Applications/FreeCAD.app/Contents/MacOS/FreeCADCmd"           # macOS старые
+    "/usr/bin/freecadcmd"
+    "/usr/local/bin/freecadcmd"
+    "/var/lib/flatpak/exports/bin/org.freecad.FreeCAD"             # flatpak
+    "$HOME/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd"
+  )
+  local c
+  for c in "${candidates[@]}"; do
+    if [[ -x "$c" ]]; then echo "$c"; return 0; fi
+  done
+  return 1
+}
+
+if ! FCMD="$(find_freecadcmd)"; then
+  cat >&2 <<'EOF'
+Ошибка: не найден freecadcmd.
+Установите FreeCAD (>= 1.0) или укажите путь явно, например:
+  FREECADCMD="/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd" ./drill-holder
+EOF
+  exit 1
+fi
+
+# '--': freecadcmd сам перехватывает опции вида --gui/--no-gui и файлы-аргументы; всё после
+# '--' он отдаёт скрипту дословно (build_holder.py снимает ведущий '--' из argv).
+exec "$FCMD" "$HERE/build_holder.py" -- "$@"

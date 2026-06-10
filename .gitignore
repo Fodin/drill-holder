@@ -1,0 +1,21 @@
+.idea/
+
+# Артефакты сборки модели. По умолчанию output.name = drill_holder; при крышке/подписях/
+# колечках детали пишутся по файлу на деталь с суффиксом (_holder/_labels/_rings/_lid),
+# калибровочный купон — _calibration. Ловим всё семейство по префиксу.
+drill_holder*.FCStd
+drill_holder*.stl
+drill_holder*.step
+drill_holder*.3mf
+*.FCStd1            # резервная копия FreeCAD
+
+# Разовые проверочные модели
+hex_test.stl
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# macOS
+.DS_Store
